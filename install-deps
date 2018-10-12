@@ -1,0 +1,12 @@
+#!/bin/bash
+###################################################################################
+## This file will install the dependencies for python and opencv
+###################################################################################
+
+apt-get update 
+
+# Requirements for open cv
+apt-get install -y libgtk2.0-dev 
+
+# Python:
+apt-get install -y python3-pip python3-dev python3-tk 
