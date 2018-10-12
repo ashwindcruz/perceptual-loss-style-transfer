@@ -1,8 +1,9 @@
 # Perceptual losses for real-time style transfer and super-resolution
 
-Implementing: Johnson, J., Alahi, A. and Fei-Fei, L., 2016, October. Perceptual losses for real-time style transfer and super-resolution. In European Conference on Computer Vision (pp. 694-711). Springer, Cham.
-
-This project provides notebooks for running through different sections of the paper and scripts that can be used to 'style' images as described by the technique in the paper. 
+Implementing: 
+Johnson, J., Alahi, A. and Fei-Fei, L., 2016, October. 
+Perceptual losses for real-time style transfer and super-resolution. 
+In European Conference on Computer Vision (pp. 694-711). Springer, Cham.
 
 ## Getting Started
 
@@ -43,12 +44,12 @@ To learn more, please refer to these links:
 * [Enabling GPUs in the Container Runtime Ecosystem](https://devblogs.nvidia.com/gpu-containers-runtime/)
 
 ## Usage
-
+<!---
 ### Notebooks
 #### Style Transfer
 You can interact with the [notebook](style_transfer.ipynb) which works through the ideas presented in Section 2.3: Style Transfer of the paper. You can also read this [post](https://ashwindcruz.github.io/blog/2018/09/26/style-transfer "Style Transfer") to better understand the notebook. 
 Before using this notebook, download a content and style image you want to experiment with and change the variables ```content_image_path``` and ```style_image_path``` respectively in the notebook to point to your images.
-
+--->
 ### Scripts
 If you prefer, you can run Python scripts directly. 
 Ensure you have downloaded a content image and a style image and set the paths appropriately in [config.py](config.py).
