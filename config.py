@@ -7,10 +7,10 @@ NP_SEED = 0
 TF_SEED = 0
 
 # Path to vgg19 checkpoint, must be downloaded separately
-CHECKPOINT_PATH = './vgg_19.ckpt'
+CHECKPOINT_PATH = './vgg_16.ckpt'
 
 # Location of tensorboard summaries
-TENSORBOARD_DIR = './train/'
+TENSORBOARD_DIR = './tensorboard/'
 
 # Path to directory used for storing images
 DEBUG_DIR = './debug/'
@@ -22,15 +22,15 @@ WIDTH = 256
 CHANNELS = 3
 
 # Layer being used for content component
-CONTENT_LAYER = 'vgg_19/conv2/conv2_2'
+CONTENT_LAYER = 'conv2/conv2_2'
 
 # Layers that can be used for style component
 STYLE_LIST = [
-'vgg_19/conv1/conv1_1',
-'vgg_19/conv2/conv2_1', 
-'vgg_19/conv3/conv3_1',
-'vgg_19/conv4/conv4_1', 
-'vgg_19/conv5/conv5_1'
+'conv1/conv1_1',
+'conv2/conv2_1',
+'conv3/conv3_1',
+'conv4/conv4_1',
+'conv5/conv5_1'
 ]
 
 # Chosen depth corresponds to how many feature layers you want to use
@@ -47,10 +47,10 @@ LEARNING_RATE = 1e-1
 # Number of training and validation step
 # In this instance, validation refers to when we would like to examine:
 # save currently optimized image and loss
-TRAINING_STEPS = 10000
+TRAINING_STEPS = 100000
 VALIDATION_STEPS = 1000
 
-# Offline debugging refers to images that will be saved to folder using plt, 
+# Offline debugging refers to images that will be saved to folder using plt,
 # every validation step
 DEBUG_OFFLINE = True
 
