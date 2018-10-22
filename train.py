@@ -1,8 +1,8 @@
 
 """
-Training script for model described in: 
-Johnson, J., Alahi, A. and Fei-Fei, L., 2016, October. 
-Perceptual losses for real-time style transfer and super-resolution. 
+Training script for model described in:
+Johnson, J., Alahi, A. and Fei-Fei, L., 2016, October.
+Perceptual losses for real-time style transfer and super-resolution.
 In European Conference on Computer Vision (pp. 694-711). Springer, Cham.
 """
 
@@ -16,12 +16,13 @@ import tensorflow.contrib.slim as slim
 
 import config as cfg
 import model
+import read_images
 from utils.imaging import display_image, format_image, save_image
 from utils.losses import gram_matrix, style_layer_loss
 import vgg
 
 # Set TF debugging to only show errors
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # TODO: Move this setup into utilities, maybe
 # Directories setup
@@ -31,7 +32,7 @@ if cfg.RESET_SAVES is True:
     # this directory
     if os.path.exists(cfg.TENSORBOARD_DIR):
         shutil.rmtree(cfg.TENSORBOARD_DIR)
-        
+
 # Create the debug directory if it doesn't exist
 # Tensorboard directory is made automatically if it doesn't exist
 if os.path.exists(cfg.DEBUG_DIR):
@@ -46,11 +47,12 @@ tf.set_random_seed(cfg.TF_SEED)
 
 # The input node to the image transform network
 itn_inputs = tf.placeholder(
-    tf.float32, shape=(None, cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS), 
+    tf.float32, shape=(None, cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS),
     name='itn_inputs')
 
 # Obtain output from image transform network
 itn_outputs = model.image_transform_net(itn_inputs, is_training=True)
+image_summary = tf.summary.image('val_images', itn_outputs, max_outputs=None)
 
 # The input node to the vgg 16 network
 vgg_16_inputs = tf.placeholder(
@@ -62,10 +64,27 @@ with slim.arg_scope(vgg.vgg_arg_scope()):
     _, end_points_inference = vgg.vgg_16(
         vgg_16_inputs, num_classes=None, is_training=False, scope='inference')
 
- # This is connected directly to the itn via the output of the itn
+vgg_16_inference_vars = tf.get_collection(
+        tf.GraphKeys.GLOBAL_VARIABLES, 'inference')
+inference_dict = dict()
+for var in vgg_16_inference_vars:
+    new_name = var.name.replace('inference', 'vgg_16')[:-2]
+    inference_dict[new_name] = var
+saver_inference = tf.train.Saver(var_list=inference_dict)
+
+ # This is connected directly to the output of the itn
 with slim.arg_scope(vgg.vgg_arg_scope()):
     _, end_points_training = vgg.vgg_16(
-        itn_outputs, num_classes=None, is_training=False, scope='training')   
+        itn_outputs, num_classes=None, is_training=False, scope='training')
+
+vgg_16_training_vars = tf.get_collection(
+        tf.GraphKeys.GLOBAL_VARIABLES, 'training')
+training_dict = dict()
+for var in vgg_16_training_vars:
+    new_name = var.name.replace('training', 'vgg_16')[:-2]
+    training_dict[new_name] = var
+
+saver_training = tf.train.Saver(var_list=training_dict)
 
 ############################
 ### Style Representation ###
@@ -89,24 +108,31 @@ style_image_batch = np.asarray(style_image_batch, dtype=np.float32)
 grams = []
 filter_sizes = []
 for i in range(cfg.CHOSEN_DEPTH):
-    chosen_layer = end_points_inference[cfg.STYLE_LIST[i]]
+    layer_name = 'inference/' + cfg.STYLE_LIST[i]
+    chosen_layer = end_points_inference[layer_name]
     gram_features = gram_matrix(chosen_layer)
     grams.append(gram_features)
-    
+
     # Determine the size of the filters used at each layer
     # This is needed to calculate the loss from that layer
     _, filter_height, filter_width, _ = chosen_layer.get_shape().as_list()
     filter_size = float(filter_height * filter_width)
-    filter_sizes.append(filter_size)    
+    filter_sizes.append(filter_size)
 
-with tf.Session() as sess:
+init_op = tf.group(
+    tf.global_variables_initializer(), tf.local_variables_initializer(),
+    name='initialize_all')
+
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.4
+with tf.Session(config=config) as sess:
     # Initialize new variables and then restore vgg_19 variables
     sess.run(init_op)
-    #saver.restore(sess, cfg.CHECKPOINT_PATH)
-        
+    saver_inference.restore(sess, cfg.CHECKPOINT_PATH)
+
     real_image_grams = sess.run(
         grams,  feed_dict={vgg_16_inputs: style_image_batch})
-    
+
 # Create constants with the real image gram matrices
 gram_constants = []
 for i in range(cfg.CHOSEN_DEPTH):
@@ -119,9 +145,16 @@ for i in range(cfg.CHOSEN_DEPTH):
 grams = []
 filter_sizes = []
 for i in range(cfg.CHOSEN_DEPTH):
-    chosen_layer = end_points_training[cfg.STYLE_LIST[i]]
+    layer_name = 'training/' + cfg.STYLE_LIST[i]
+    chosen_layer = end_points_training[layer_name]
     gram_features = gram_matrix(chosen_layer)
     grams.append(gram_features)
+
+    # Determine the size of the filters used at each layer
+    # This is needed to calculate the loss from that layer
+    _, filter_height, filter_width, _ = chosen_layer.get_shape().as_list()
+    filter_size = float(filter_height * filter_width)
+    filter_sizes.append(filter_size)
 
 # Calculate the style loss
 layer_losses = []
@@ -137,8 +170,22 @@ style_loss = tf.add_n(layer_losses, name='sum_layer_losses')
 ### Content Representation ###
 ##############################
 
-content_rep_real = end_points_inference(cfg.CONTENT_LAYER)
-content_rep_itn = end_points_training(cfg.CONTENT_LAYER)
+# Construct the style image tensor
+# And the graph operation which assigns it to input_var
+#content_image = plt.imread(cfg.CONTENT_IMAGE_PATH)
+#content_image = cv2.resize(content_image, (cfg.HEIGHT, cfg.WIDTH))
+#content_image_batch = np.tile(content_image, cfg.BATCH_SIZE)
+#content_image_batch = np.reshape(
+#    content_image_batch, (cfg.BATCH_SIZE, cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS))
+#content_image_batch = np.asarray(content_image_batch, dtype=np.float32)
+
+content_image_batch = read_images.sample_batch()
+
+
+content_rep_real = end_points_inference[
+    'inference/' + cfg.CONTENT_LAYER]
+content_rep_itn = end_points_training[
+    'training/' + cfg.CONTENT_LAYER]
 
 content_loss = tf.losses.mean_squared_error(
     labels=content_rep_real, predictions=content_rep_itn)
@@ -148,7 +195,7 @@ content_loss = tf.losses.mean_squared_error(
 loss = (cfg.CONTENT_WEIGHT * content_loss) + (cfg.STYLE_WEIGHT * style_loss)
 optimizer = tf.train.AdamOptimizer(cfg.LEARNING_RATE)
 train_op = optimizer.minimize(
-    loss, 
+    loss,
     var_list=tf.get_collection(
         tf.GraphKeys.GLOBAL_VARIABLES, 'image_transform_net'))
 
@@ -158,26 +205,39 @@ init_op = tf.group(
 
 # Tensorboard summaries
 loss_summary = tf.summary.scalar('loss', loss)
-#image_summary = tf.summary.image('image', input_var)
-
 
 # Training
-with tf.Session() as sess: 
+config = tf.ConfigProto()
+config.gpu_options.per_process_gpu_memory_fraction = 0.4
+with tf.Session(config=config) as sess:
     # Initialize all variables and then
     # restore weights for feature extractor
     sess.run(init_op)
-    #saver.restore(sess, cfg.CHECKPOINT_PATH)
-    
+    saver_inference.restore(sess, cfg.CHECKPOINT_PATH)
+    saver_training.restore(sess, cfg.CHECKPOINT_PATH)
+
     # Set up summary writer for tensorboard, saving graph as well
     train_writer = tf.summary.FileWriter(cfg.TENSORBOARD_DIR, sess.graph)
-    
+
     # Begin training
     for i in range(cfg.TRAINING_STEPS):
-        loss_summary_, _ = sess.run([loss_summary, train_op])
+
+        # TODO: Should the 2 input placeholders be collapsed into 1?
+        content_image_batch = read_images.sample_batch()
+        loss_summary_, _ = sess.run([loss_summary, train_op],
+                feed_dict={vgg_16_inputs:content_image_batch,
+                    itn_inputs:content_image_batch})
+
         train_writer.add_summary(loss_summary_, i)
 
-        if i % 100 == 0:
-            loss_ = sess.run(loss)
-            print(loss_)        
-        
+        if i % cfg.VALIDATION_STEPS == 0:
+            val_image_batch = read_images.val_images()
+            loss_, image_summary_ = sess.run([loss, image_summary],
+                feed_dict={vgg_16_inputs:val_image_batch,
+                    itn_inputs:val_image_batch})
+            train_writer.add_summary(image_summary_, i)
+
+
+            print(loss_)
+
 
