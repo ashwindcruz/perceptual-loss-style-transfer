@@ -16,21 +16,21 @@ TENSORBOARD_DIR = './tensorboard/'
 DEBUG_DIR = './debug/'
 
 # Dimensions desired for input, channels must be kept as 3
-BATCH_SIZE = 1
+BATCH_SIZE = 4
 HEIGHT = 256
 WIDTH = 256
 CHANNELS = 3
 
 # Layer being used for content component
-CONTENT_LAYER = 'conv2/conv2_2'
+CONTENT_LAYER = 'vgg_16/conv2/conv2_2'
 
 # Layers that can be used for style component
 STYLE_LIST = [
-'conv1/conv1_1',
-'conv2/conv2_1',
-'conv3/conv3_1',
-'conv4/conv4_1',
-'conv5/conv5_1'
+'vgg_16/conv1/conv1_1',
+'vgg_16/conv2/conv2_1',
+'vgg_16/conv3/conv3_1',
+'vgg_16/conv4/conv4_1',
+'vgg_16/conv5/conv5_1'
 ]
 
 # Chosen depth corresponds to how many feature layers you want to use

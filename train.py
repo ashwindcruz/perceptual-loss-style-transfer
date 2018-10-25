@@ -62,29 +62,15 @@ vgg_16_inputs = tf.placeholder(
 # Obtain endpoints from the vgg 16 network
 with slim.arg_scope(vgg.vgg_arg_scope()):
     _, end_points_inference = vgg.vgg_16(
-        vgg_16_inputs, num_classes=None, is_training=False, scope='inference')
-
-vgg_16_inference_vars = tf.get_collection(
-        tf.GraphKeys.GLOBAL_VARIABLES, 'inference')
-inference_dict = dict()
-for var in vgg_16_inference_vars:
-    new_name = var.name.replace('inference', 'vgg_16')[:-2]
-    inference_dict[new_name] = var
-saver_inference = tf.train.Saver(var_list=inference_dict)
+        vgg_16_inputs, num_classes=None, is_training=False)
 
  # This is connected directly to the output of the itn
 with slim.arg_scope(vgg.vgg_arg_scope()):
     _, end_points_training = vgg.vgg_16(
-        itn_outputs, num_classes=None, is_training=False, scope='training')
+        itn_outputs, num_classes=None, is_training=False)
 
-vgg_16_training_vars = tf.get_collection(
-        tf.GraphKeys.GLOBAL_VARIABLES, 'training')
-training_dict = dict()
-for var in vgg_16_training_vars:
-    new_name = var.name.replace('training', 'vgg_16')[:-2]
-    training_dict[new_name] = var
-
-saver_training = tf.train.Saver(var_list=training_dict)
+vgg_16_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, 'vgg_16')
+vgg_16_saver = tf.train.Saver(var_list=vgg_16_vars)
 
 ############################
 ### Style Representation ###
@@ -108,8 +94,7 @@ style_image_batch = np.asarray(style_image_batch, dtype=np.float32)
 grams = []
 filter_sizes = []
 for i in range(cfg.CHOSEN_DEPTH):
-    layer_name = 'inference/' + cfg.STYLE_LIST[i]
-    chosen_layer = end_points_inference[layer_name]
+    chosen_layer = end_points_inference[cfg.STYLE_LIST[i]]
     gram_features = gram_matrix(chosen_layer)
     grams.append(gram_features)
 
@@ -124,11 +109,11 @@ init_op = tf.group(
     name='initialize_all')
 
 config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.4
+
 with tf.Session(config=config) as sess:
     # Initialize new variables and then restore vgg_19 variables
     sess.run(init_op)
-    saver_inference.restore(sess, cfg.CHECKPOINT_PATH)
+    vgg_16_saver.restore(sess, cfg.CHECKPOINT_PATH)
 
     real_image_grams = sess.run(
         grams,  feed_dict={vgg_16_inputs: style_image_batch})
@@ -145,8 +130,7 @@ for i in range(cfg.CHOSEN_DEPTH):
 grams = []
 filter_sizes = []
 for i in range(cfg.CHOSEN_DEPTH):
-    layer_name = 'training/' + cfg.STYLE_LIST[i]
-    chosen_layer = end_points_training[layer_name]
+    chosen_layer = end_points_training[cfg.STYLE_LIST[i]]
     gram_features = gram_matrix(chosen_layer)
     grams.append(gram_features)
 
@@ -170,22 +154,10 @@ style_loss = tf.add_n(layer_losses, name='sum_layer_losses')
 ### Content Representation ###
 ##############################
 
-# Construct the style image tensor
-# And the graph operation which assigns it to input_var
-#content_image = plt.imread(cfg.CONTENT_IMAGE_PATH)
-#content_image = cv2.resize(content_image, (cfg.HEIGHT, cfg.WIDTH))
-#content_image_batch = np.tile(content_image, cfg.BATCH_SIZE)
-#content_image_batch = np.reshape(
-#    content_image_batch, (cfg.BATCH_SIZE, cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS))
-#content_image_batch = np.asarray(content_image_batch, dtype=np.float32)
-
 content_image_batch = read_images.sample_batch()
 
-
-content_rep_real = end_points_inference[
-    'inference/' + cfg.CONTENT_LAYER]
-content_rep_itn = end_points_training[
-    'training/' + cfg.CONTENT_LAYER]
+content_rep_real = end_points_inference[cfg.CONTENT_LAYER]
+content_rep_itn = end_points_training[cfg.CONTENT_LAYER]
 
 content_loss = tf.losses.mean_squared_error(
     labels=content_rep_real, predictions=content_rep_itn)
@@ -208,13 +180,12 @@ loss_summary = tf.summary.scalar('loss', loss)
 
 # Training
 config = tf.ConfigProto()
-config.gpu_options.per_process_gpu_memory_fraction = 0.4
+
 with tf.Session(config=config) as sess:
     # Initialize all variables and then
     # restore weights for feature extractor
     sess.run(init_op)
-    saver_inference.restore(sess, cfg.CHECKPOINT_PATH)
-    saver_training.restore(sess, cfg.CHECKPOINT_PATH)
+    vgg_16_saver.restore(sess, cfg.CHECKPOINT_PATH)
 
     # Set up summary writer for tensorboard, saving graph as well
     train_writer = tf.summary.FileWriter(cfg.TENSORBOARD_DIR, sess.graph)
