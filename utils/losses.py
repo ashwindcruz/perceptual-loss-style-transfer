@@ -14,18 +14,19 @@ def gram_matrix(feature_set):
     Returns:
         gram_matrix: Computed Gram matrix ([num_feature_maps, num_feature_maps])
     """
-
-    batch_size, filter_height, filter_width, num_feature_maps = \
-        feature_set.get_shape().as_list()
+    feature_set_shape = tf.shape(feature_set)
     feature_set = tf.reshape(
         feature_set,
-        [cfg.BATCH_SIZE, filter_height * filter_width, num_feature_maps],
+        [
+            feature_set_shape[0], 
+            feature_set_shape[1] * feature_set_shape[2], 
+            feature_set_shape[3]
+        ],
         name='vectorize_map')
     gram_matrix = tf.matmul(
         feature_set, feature_set, transpose_a=True, name='gram_map')
 
     return gram_matrix
-
 
 def style_layer_loss(gram_matrix_desired, gram_matrix_predicted, filter_size):
     """
@@ -35,7 +36,8 @@ def style_layer_loss(gram_matrix_desired, gram_matrix_predicted, filter_size):
     Args:
         gram_matrix_desired  : Gram matrix of the styling image
         gram_matrix_predicted: Gram matrix of the image undergoing optimization.
-        filter_size          : The size of an individual filter map (filter_height * filter_width)
+        filter_size          : The size of an individual filter map 
+            (filter_height * filter_width)
     Returns:
         loss_contribution: The loss contribution from this layer
     """
