@@ -43,6 +43,12 @@ To learn more, please refer to these links:
 * [Nvidia Runtime Container for Docker](https://github.com/NVIDIA/nvidia-docker)
 * [Enabling GPUs in the Container Runtime Ecosystem](https://devblogs.nvidia.com/gpu-containers-runtime/)
 
+### Data
+To training and validation, I utilized the [COCO 2014](http://cocodataset.org/#download) datasets, as used by the authors in the paper. 
+You can obtain these datasets here: 
+* [Training data](http://images.cocodataset.org/zips/train2014.zip)
+* [Validation data](http://images.cocodataset.org/zips/val2014.zip)
+
 ## Usage
 <!---
 ### Notebooks
@@ -74,7 +80,7 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 --->
 ## Versioning
 
-I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ashwindcruz/style-transfer/tags). 
+I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ashwindcruz/perceptual-loss-style-transfer/tags). 
 
 ## Authors
 
