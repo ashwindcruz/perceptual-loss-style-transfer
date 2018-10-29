@@ -44,10 +44,13 @@ To learn more, please refer to these links:
 * [Enabling GPUs in the Container Runtime Ecosystem](https://devblogs.nvidia.com/gpu-containers-runtime/)
 
 ### Data
-To training and validation, I utilized the [COCO 2014](http://cocodataset.org/#download) datasets, as used by the authors in the paper. 
+For training and validation, I utilized the [COCO 2014](http://cocodataset.org/#download) datasets, as used by the authors in the paper. 
 You can obtain these datasets here: 
 * [Training data](http://images.cocodataset.org/zips/train2014.zip)
 * [Validation data](http://images.cocodataset.org/zips/val2014.zip)
+
+Alternatively, you may also use your own training and validation set. 
+Whichever you choose, simply change the appropriate paths in the [config.py](config.py) file. 
 
 ## Usage
 <!---
