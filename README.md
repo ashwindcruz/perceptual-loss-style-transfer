@@ -24,7 +24,7 @@ The following packages which are part of the Python standard library are used in
 * ```os```
 * ```shutil```
 
-Additionally, I utilise a pretrained VGG19 model checkpoint. You can download the compressed folder from [here](http://download.tensorflow.org/models/vgg_19_2016_08_28.tar.gz). After extraction, place the vgg_19.ckpt file in this folder or within the scripts you are using, change the variable ```checkpoint_path``` to point to the relevant location. 
+Additionally, I utilise a pretrained VGG16 model checkpoint. You can download the compressed folder from [here](http://download.tensorflow.org/models/vgg_16_2016_08_28.tar.gz). After extraction, place the vgg_16.ckpt file in this folder or within the scripts you are using, change the variable ```checkpoint_path``` to point to the relevant location. 
 
 ### Installing
 You may install these packages yourself or use the [requirements.txt](requirements.txt) file like so: 
@@ -42,6 +42,15 @@ Note that I've used ```nvidia-docker``` instead of ```docker```. This is for bet
 To learn more, please refer to these links: 
 * [Nvidia Runtime Container for Docker](https://github.com/NVIDIA/nvidia-docker)
 * [Enabling GPUs in the Container Runtime Ecosystem](https://devblogs.nvidia.com/gpu-containers-runtime/)
+
+### Data
+For training and validation, I utilized the [COCO 2014](http://cocodataset.org/#download) datasets, as used by the authors in the paper. 
+You can obtain these datasets here: 
+* [Training data](http://images.cocodataset.org/zips/train2014.zip)
+* [Validation data](http://images.cocodataset.org/zips/val2014.zip)
+
+Alternatively, you may also use your own training and validation set. 
+Whichever you choose, simply change the appropriate paths in the [config.py](config.py) file. 
 
 ## Usage
 <!---
@@ -74,7 +83,7 @@ Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c6
 --->
 ## Versioning
 
-I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ashwindcruz/style-transfer/tags). 
+I use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/ashwindcruz/perceptual-loss-style-transfer/tags). 
 
 ## Authors
 
