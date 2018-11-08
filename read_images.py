@@ -12,10 +12,11 @@ import tensorflow as tf
 
 import config as cfg
 
-train_image_filenames = tf.gfile.Glob('./train2014/*')
-num_images = len(train_image_filenames)
+train_image_filenames = tf.gfile.Glob(cfg.TRAIN_IMAGES_DIR + '*')
+num_train_images = len(train_image_filenames)
 
-val_image_filenames = tf.gfile.Glob('./val_images/*')
+val_image_filenames = tf.gfile.Glob(cfg.VAL_IMAGES_DIR + '*')
+num_val_images = len(val_image_filenames)
 
 def sample_batch():
     """
@@ -26,7 +27,7 @@ def sample_batch():
     Returns:
         img_batch: Batch of images
     """
-    idx_choices = np.random.choice(num_images, cfg.BATCH_SIZE, replace=False)
+    idx_choices = np.random.choice(num_train_images, cfg.BATCH_SIZE, replace=False)
     chosen_images = np.take(train_image_filenames, idx_choices)
 
     img_batch = np.empty((cfg.BATCH_SIZE, cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS))
