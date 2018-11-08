@@ -1,6 +1,7 @@
-# Path to images we are extracting content and style from
-CONTENT_IMAGE_PATH = './images/coastal_scene.jpg'
+# Path to images uused during training and validation
 STYLE_IMAGE_PATH = './images/starry_night.jpg'
+TRAIN_IMAGES_DIR = './train2014/train2014/'
+VAL_IMAGES_DIR = './val2014/val2014/'
 
 # Seed for initializing numpy and tf
 NP_SEED = 0
@@ -40,6 +41,7 @@ CHOSEN_DEPTH = 2
 # Weights for each loss component
 CONTENT_WEIGHT = 1.0
 STYLE_WEIGHT = CONTENT_WEIGHT/8e-4
+TV_WEIGHT = 1e-5
 
 # Learning rate for optimizer
 LEARNING_RATE = 1e-1
