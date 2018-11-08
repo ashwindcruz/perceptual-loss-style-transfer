@@ -45,8 +45,24 @@ def style_layer_loss(gram_matrix_desired, gram_matrix_predicted, filter_size):
     _, num_filters, _ = gram_matrix_desired.get_shape().as_list()
     num_filters = float(num_filters)
     summed_squared_difference = tf.reduce_sum(
-        tf.square(gram_matrix_predicted - gram_matrix_desired), name='summed_squared_diff')
-    loss_contribution = (1 / (4 * np.power(num_filters, 2) * np.power(filter_size, 2))) \
+        tf.square(
+            gram_matrix_predicted - gram_matrix_desired), 
+        name='summed_squared_diff')
+    loss_contribution = (1 / (4 * np.power(num_filters, 2) 
+        * np.power(filter_size, 2))) \
         * summed_squared_difference
 
     return loss_contribution
+
+def total_variation_loss(images):
+    """
+    Calculate and return the total variation loss for a batch of images. 
+
+    Args: 
+        images: Batch of images ([batch_size, height, width, channels])
+    Returns: 
+        tv_loss: Total variation loss for the batch of images.
+    """
+    tv_loss = tf.reduce_sum(
+        tf.image.total_variation(images, name='tv_loss'))
+    return tv_loss
