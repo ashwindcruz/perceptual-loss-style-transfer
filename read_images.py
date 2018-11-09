@@ -12,11 +12,11 @@ import tensorflow as tf
 
 import config as cfg
 
-train_image_filenames = tf.gfile.Glob(cfg.TRAIN_IMAGES_DIR + '*')
-num_train_images = len(train_image_filenames)
+TRAIN_IMAGE_FILENAMES = tf.gfile.Glob(cfg.TRAIN_IMAGES_DIR + '*')
+NUM_TRAIN_IMAGES = len(TRAIN_IMAGE_FILENAMES)
 
-val_image_filenames = tf.gfile.Glob(cfg.VAL_IMAGES_DIR + '*')
-num_val_images = len(val_image_filenames)
+VAL_IMAGE_FILENAMES = tf.gfile.Glob(cfg.VAL_IMAGES_DIR + '*')
+NUM_VAL_IMAGES = len(VAL_IMAGE_FILENAMES)
 
 def sample_batch():
     """
@@ -65,3 +65,32 @@ def val_images():
 
     return img_batch
 
+def fetch_batch(start_index, dataset):
+    """
+    Fetch a batch of images for training or validation.
+    Start at the provided index. 
+
+    Args: 
+        start_index: Index to begin batch from.
+        dataset    : Choice to take batch from either training or validation set. 
+    """
+    if dataset == 'train':
+        chosen_images = TRAIN_IMAGE_FILENAMES[
+            start_index:(start_index+cfg.BATCH_SIZE)]
+    else:
+        chosen_images = VAL_IMAGE_FILENAMES[
+            start_index:(start_index+cfg.BATCH_SIZE)]
+
+    img_batch = np.empty((cfg.BATCH_SIZE, cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS))
+    for i, image_path in enumerate(chosen_images):
+        image = plt.imread(image_path)
+        image = cv2.resize(image, (cfg.HEIGHT, cfg.WIDTH))
+        if np.ndim(image) == 2:
+            image = np.reshape(
+                np.repeat(image, cfg.CHANNELS),
+                (cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS))
+        image = np.asarray(image, dtype=np.float32)
+
+        img_batch[i, :, :, :] = image
+
+    return img_batch

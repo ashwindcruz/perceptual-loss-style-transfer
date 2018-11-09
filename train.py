@@ -158,8 +158,6 @@ style_loss = tf.add_n(layer_losses, name='sum_layer_losses')
 ### Content Representation ###
 ##############################
 
-content_image_batch = read_images.sample_batch()
-
 content_rep_real = end_points_fixed[cfg.CONTENT_LAYER]
 content_rep_itn = end_points_itn[cfg.CONTENT_LAYER]
 
@@ -185,7 +183,8 @@ init_op = tf.group(
     name='initialize_all')
 
 # Tensorboard summaries
-loss_summary = tf.summary.scalar('loss', loss)
+train_loss_summary = tf.summary.scalar('train_loss', loss)
+val_loss_summary = tf.summary.scalar('val_loss', loss)
 
 # Training
 with tf.Session() as sess:
@@ -199,13 +198,37 @@ with tf.Session() as sess:
         cfg.TENSORBOARD_DIR, sess.graph)
 
     # Begin training
-    for i in range(cfg.TRAINING_STEPS):
+    num_train_batches = read_images.NUM_TRAIN_IMAGES // cfg.BATCH_SIZE
+    num_val_batches = read_images.NUM_VAL_IMAGES // cfg.BATCH_SIZE
 
-        content_image_batch = read_images.sample_batch()
-        loss_summary_, _ = sess.run([loss_summary, train_op],
-                feed_dict={image_inputs:content_image_batch})
+    training_step = 0
+    for i in range(cfg.NUM_EPOCHS):
+        # Go through one pass of the training data
+        for j in range(num_train_batches):
 
-        train_writer.add_summary(loss_summary_, i)
+            start_index = j * cfg.BATCH_SIZE
+            content_image_batch = read_images.fetch_batch(
+                start_index, 'train')
+            train_loss_summary_, _ = sess.run([loss_summary, train_op],
+                    feed_dict={image_inputs:content_image_batch})
+
+            train_writer.add_summary(
+                train_loss_summary_, training_step)
+            training_step += 1
+
+
+        # Go through one pass of the validation data
+        for j in range(num_val_batches):
+
+            start_index = j * cfg.BATCH_SIZE
+            content_image_batch = read_images.fetch_batch(
+                start_index, 'val')
+            val_loss_summary_, = sess.run([loss_summary],
+                    feed_dict={image_inputs:content_image_batch})
+
+            train_writer.add_summary(val_loss_summary_, training_step)
+            training_step += 1
+
 
         if i % cfg.VALIDATION_STEPS == 0:
             val_image_batch = read_images.val_images()
