@@ -58,7 +58,7 @@ image_inputs = tf.placeholder(
 itn_outputs = model.image_transform_net(
     image_inputs, is_training=True)
 image_summary = tf.summary.image(
-    'val_images', itn_outputs, max_outputs=None)
+    'val_images', itn_outputs, max_outputs=cfg.BATCH_SIZE)
 
 # Obtain endpoints from the vgg 16 network on the style and content 
 # images we are trying to match 
@@ -104,7 +104,8 @@ for i in range(cfg.CHOSEN_DEPTH):
 
     # Determine the size of the filters used at each layer
     # This is needed to calculate the loss from that layer
-    _, filter_height, filter_width, _ = chosen_layer.get_shape().as_list()
+    _, filter_height, filter_width, _ = \
+        chosen_layer.get_shape().as_list()
     filter_size = float(filter_height * filter_width)
     filter_sizes.append(filter_size)
 
@@ -139,7 +140,8 @@ for i in range(cfg.CHOSEN_DEPTH):
 
     # Determine the size of the filters used at each layer
     # This is needed to calculate the loss from that layer
-    _, filter_height, filter_width, _ = chosen_layer.get_shape().as_list()
+    _, filter_height, filter_width, _ = \
+        chosen_layer.get_shape().as_list()
     filter_size = float(filter_height * filter_width)
     filter_sizes.append(filter_size)
 
@@ -184,7 +186,11 @@ init_op = tf.group(
 
 # Tensorboard summaries
 train_loss_summary = tf.summary.scalar('train_loss', loss)
-val_loss_summary = tf.summary.scalar('val_loss', loss)
+
+val_loss_ph = tf.placeholder(
+    dtype=tf.float64, shape=(), name='val_loss_placeholder')
+val_loss = tf.identity(val_loss_ph, name='val_loss_tensor')
+val_loss_summary = tf.summary.scalar('val_loss', val_loss)
 
 # Training
 with tf.Session() as sess:
@@ -202,40 +208,46 @@ with tf.Session() as sess:
     num_val_batches = read_images.NUM_VAL_IMAGES // cfg.BATCH_SIZE
 
     training_step = 0
-    for i in range(cfg.NUM_EPOCHS):
+    for i in range(cfg.TRAINING_EPOCHS):
         # Go through one pass of the training data
         for j in range(num_train_batches):
 
             start_index = j * cfg.BATCH_SIZE
             content_image_batch = read_images.fetch_batch(
                 start_index, 'train')
-            train_loss_summary_, _ = sess.run([loss_summary, train_op],
+            train_loss_summary_, _ = sess.run(
+                    [train_loss_summary, train_op],
                     feed_dict={image_inputs:content_image_batch})
 
             train_writer.add_summary(
                 train_loss_summary_, training_step)
             training_step += 1
-
-
+            
+            # Check how the validation images are looking
+            if training_step % cfg.VALIDATION_STEPS == 0:
+                content_image_batch = read_images.fetch_batch(
+                    read_images.CHOSEN_IDX, 'val')
+                image_summary_ = sess.run(
+                    image_summary,
+                    feed_dict={image_inputs:content_image_batch}
+                    )
+                train_writer.add_summary(
+                    image_summary_, training_step)
+                
+        print('Epoch {} done'.format(i+1))
+        
         # Go through one pass of the validation data
+        val_loss_accum = 0
         for j in range(num_val_batches):
 
             start_index = j * cfg.BATCH_SIZE
             content_image_batch = read_images.fetch_batch(
                 start_index, 'val')
-            val_loss_summary_, = sess.run([loss_summary],
-                    feed_dict={image_inputs:content_image_batch})
-
-            train_writer.add_summary(val_loss_summary_, training_step)
-            training_step += 1
-
-
-        if i % cfg.VALIDATION_STEPS == 0:
-            val_image_batch = read_images.val_images()
-            loss_, image_summary_ = sess.run([loss, image_summary],
-                feed_dict={image_inputs:val_image_batch})
-            train_writer.add_summary(image_summary_, i)
-
-            print(loss_)
-
-
+            val_loss_accum  += sess.run(
+                loss,
+                feed_dict={image_inputs:content_image_batch})
+        val_loss_summary_ = sess.run(
+            val_loss_summary, 
+            feed_dict={val_loss_ph:val_loss_accum})
+        train_writer.add_summary(val_loss_summary_, training_step)
+        
