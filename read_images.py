@@ -18,6 +18,11 @@ NUM_TRAIN_IMAGES = len(TRAIN_IMAGE_FILENAMES)
 VAL_IMAGE_FILENAMES = tf.gfile.Glob(cfg.VAL_IMAGES_DIR + '*')
 NUM_VAL_IMAGES = len(VAL_IMAGE_FILENAMES)
 
+# These are for choosing validation images that we will examine persistently 
+# throughout training
+CHOSEN_IDX = int(np.random.choice(NUM_VAL_IMAGES, 1, replace=False))
+
+
 def sample_batch():
     """
     Sample a batch of images for the network to train with.
@@ -92,5 +97,5 @@ def fetch_batch(start_index, dataset):
         image = np.asarray(image, dtype=np.float32)
 
         img_batch[i, :, :, :] = image
-
+    
     return img_batch
