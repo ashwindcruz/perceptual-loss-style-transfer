@@ -17,7 +17,7 @@ TENSORBOARD_DIR = './tensorboard/'
 DEBUG_DIR = './debug/'
 
 # Dimensions desired for input, channels must be kept as 3
-BATCH_SIZE = 4
+BATCH_SIZE = 16
 HEIGHT = 256
 WIDTH = 256
 CHANNELS = 3
@@ -27,28 +27,28 @@ CONTENT_LAYER = 'vgg_16/conv2/conv2_2'
 
 # Layers that can be used for style component
 STYLE_LIST = [
-'vgg_16/conv1/conv1_1',
-'vgg_16/conv2/conv2_1',
-'vgg_16/conv3/conv3_1',
-'vgg_16/conv4/conv4_1',
-'vgg_16/conv5/conv5_1'
+'vgg_16/conv1/conv1_2',
+'vgg_16/conv2/conv2_2',
+'vgg_16/conv3/conv3_3',
+'vgg_16/conv4/conv4_3'
 ]
 
 # Chosen depth corresponds to how many feature layers you want to use
 # for the style component
-CHOSEN_DEPTH = 2
+CHOSEN_DEPTH = 4
 
 # Weights for each loss component
 CONTENT_WEIGHT = 1.0
-STYLE_WEIGHT = CONTENT_WEIGHT/8e-4
-TV_WEIGHT = 1e-5
+STYLE_WEIGHT = CONTENT_WEIGHT * 8e3
+TV_WEIGHT = 1e-6
 
 # Learning rate for optimizer
-LEARNING_RATE = 1e-1
+LEARNING_RATE = 1e-3
 
 # Number of training and validation step
 # In this instance, validation refers to when we would like to examine:
 # save currently optimized image and loss
+TRAINING_EPOCHS = 20 
 TRAINING_STEPS = 100000
 VALIDATION_STEPS = 1000
 
