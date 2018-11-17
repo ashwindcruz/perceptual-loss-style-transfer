@@ -38,12 +38,12 @@ STYLE_LIST = [
 CHOSEN_DEPTH = 4
 
 # Weights for each loss component
-CONTENT_WEIGHT = 1.0
-STYLE_WEIGHT = CONTENT_WEIGHT * 8e3
-TV_WEIGHT = 1e-6
+CONTENT_WEIGHT = 5.0
+STYLE_WEIGHT = CONTENT_WEIGHT * 2
+TV_WEIGHT = 0#1e-6
 
 # Learning rate for optimizer
-LEARNING_RATE = 1e-3
+LEARNING_RATE = 1e-2
 
 # Number of training and validation step
 # In this instance, validation refers to when we would like to examine:
@@ -55,6 +55,9 @@ VALIDATION_STEPS = 1000
 # Offline debugging refers to images that will be saved to folder using plt,
 # every validation step
 DEBUG_OFFLINE = True
+
+# This is how often training information will be printed to screen
+DISPLAY_STEPS = 10
 
 # Determines whether information is saved between runs
 # for tensorboard
