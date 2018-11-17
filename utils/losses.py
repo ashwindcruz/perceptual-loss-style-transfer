@@ -64,5 +64,5 @@ def total_variation_loss(images):
         tv_loss: Total variation loss for the batch of images.
     """
     tv_loss = tf.reduce_sum(
-        tf.image.total_variation(images, name='tv_loss'))
+        tf.image.total_variation(images, name='total_variation'))
     return tv_loss
