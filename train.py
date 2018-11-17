@@ -42,8 +42,8 @@ os.makedirs(cfg.DEBUG_DIR)
 
 # Set the seeds to provide consistency between runs
 # Can also comment out for variability between runs
-np.random.seed(cfg.NP_SEED)
-tf.set_random_seed(cfg.TF_SEED)
+#np.random.seed(cfg.NP_SEED)
+#tf.set_random_seed(cfg.TF_SEED)
 
 
 # Input image placeholder
@@ -58,7 +58,7 @@ image_inputs = tf.placeholder(
 itn_outputs = model.image_transform_net(
     image_inputs, is_training=True)
 image_summary = tf.summary.image(
-    'val_images', itn_outputs, max_outputs=cfg.BATCH_SIZE)
+    'val_images', itn_outputs, max_outputs=3)
 
 # Obtain endpoints from the vgg 16 network on the style and content 
 # images we are trying to match 
@@ -166,8 +166,10 @@ content_rep_itn = end_points_itn[cfg.CONTENT_LAYER]
 content_loss = tf.losses.mean_squared_error(
     labels=content_rep_real, predictions=content_rep_itn)
 
+
 # Calculate total variation loss
 tv_loss = total_variation_loss(itn_outputs)
+
 
 # Set up the final loss, optimizer, and summaries
 loss = (cfg.CONTENT_WEIGHT * content_loss) \
@@ -185,7 +187,18 @@ init_op = tf.group(
     name='initialize_all')
 
 # Tensorboard summaries
+style_loss_summary = tf.summary.scalar('style_loss', style_loss)
+content_loss_summary = tf.summary.scalar('content_loss', content_loss)
+tv_loss_summary = tf.summary.scalar('total_variation_loss', tv_loss)
 train_loss_summary = tf.summary.scalar('train_loss', loss)
+train_merged_summaries = tf.summary.merge(
+    [
+        style_loss_summary, 
+        content_loss_summary, 
+        tv_loss_summary, 
+        train_loss_summary
+    ],
+    name='train_merged_summaries')
 
 val_loss_ph = tf.placeholder(
     dtype=tf.float64, shape=(), name='val_loss_placeholder')
@@ -215,14 +228,34 @@ with tf.Session() as sess:
             start_index = j * cfg.BATCH_SIZE
             content_image_batch = read_images.fetch_batch(
                 start_index, 'train')
-            train_loss_summary_, _ = sess.run(
-                    [train_loss_summary, train_op],
-                    feed_dict={image_inputs:content_image_batch})
+            summaries, _ =     sess.run(
+                [train_merged_summaries, train_op],
+                feed_dict={image_inputs:content_image_batch})
 
             train_writer.add_summary(
-                train_loss_summary_, training_step)
+                summaries, training_step)
             training_step += 1
-            
+
+            # Print losses to screen
+            if training_step % cfg.DISPLAY_STEPS == 0:
+                content_loss_, style_loss_, tv_loss_, loss_ = \
+                    sess.run(
+                        [
+                            content_loss,
+                            style_loss, 
+                            tv_loss,
+                            loss
+                        ],
+                        feed_dict={image_inputs:content_image_batch})
+                print(
+                    """ Batch: {:7.3f}, Style Loss: {:12.3f}, Content Loss: {:12.3f}, TV Loss: {:12.3f}, Combined Loss: {:12.3f}\
+                        """.format(
+                        training_step,
+                        style_loss_, 
+                        content_loss_, 
+                        tv_loss_, 
+                        loss_))
+
             # Check how the validation images are looking
             if training_step % cfg.VALIDATION_STEPS == 0:
                 content_image_batch = read_images.fetch_batch(
