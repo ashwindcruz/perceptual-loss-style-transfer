@@ -19,11 +19,11 @@ import config as cfg
 import model
 import read_images
 from utils.imaging import display_image, format_image, save_image
-from utils.losses import gram_matrix, style_layer_loss, total_variation_loss
+from utils.losses import gram_matrix, content_rep_loss, style_layer_loss, total_variation_loss
 import vgg
 
 # Set TF debugging to only show errors
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # TODO: Move this setup into utilities, maybe
 # Directories setup
@@ -63,18 +63,18 @@ image_summary = tf.summary.image(
 # Obtain endpoints from the vgg 16 network on the style and content 
 # images we are trying to match 
 with slim.arg_scope(vgg.vgg_arg_scope()):
-    _, end_points_fixed = vgg.vgg_16(
+    _, end_points_fixed = vgg.vgg_19(
         image_inputs, num_classes=None, is_training=False)
 
  # Obtain endpoints from the vgg 16 network on the output of the 
  # image transform network 
 with slim.arg_scope(vgg.vgg_arg_scope()):
-    _, end_points_itn = vgg.vgg_16(
+    _, end_points_itn = vgg.vgg_19(
         itn_outputs, num_classes=None, is_training=False)
 
-vgg_16_vars = tf.get_collection(
-    tf.GraphKeys.GLOBAL_VARIABLES, 'vgg_16')
-vgg_16_saver = tf.train.Saver(var_list=vgg_16_vars)
+vgg_19_vars = tf.get_collection(
+    tf.GraphKeys.GLOBAL_VARIABLES, 'vgg_19')
+vgg_19_saver = tf.train.Saver(var_list=vgg_19_vars)
 
 ############################
 ### Style Representation ###
@@ -87,12 +87,8 @@ vgg_16_saver = tf.train.Saver(var_list=vgg_16_vars)
 # And the graph operation which assigns it to input_var
 style_image = plt.imread(cfg.STYLE_IMAGE_PATH)
 style_image = cv2.resize(style_image, (cfg.HEIGHT, cfg.WIDTH))
-style_image_batch = np.tile(style_image, cfg.BATCH_SIZE)
-style_image_batch = np.reshape(
-    style_image_batch, 
-    (cfg.BATCH_SIZE, cfg.HEIGHT, cfg.WIDTH, cfg.CHANNELS))
+style_image_batch = np.repeat(style_image[None, :, :, :], cfg.BATCH_SIZE, axis=0)
 style_image_batch = np.asarray(style_image_batch, dtype=np.float32)
-
 
 # Set up gram matrix nodes
 grams = []
@@ -117,7 +113,7 @@ init_op = tf.group(
 with tf.Session() as sess:
     # Initialize new variables and then restore vgg_19 variables
     sess.run(init_op)
-    vgg_16_saver.restore(sess, cfg.CHECKPOINT_PATH)
+    vgg_19_saver.restore(sess, cfg.CHECKPOINT_PATH)
 
     real_image_grams = sess.run(
         grams,  feed_dict={image_inputs: style_image_batch})
@@ -133,6 +129,7 @@ for i in range(cfg.CHOSEN_DEPTH):
 # Obtain gram matrix information for output of itn
 grams = []
 filter_sizes = []
+
 for i in range(cfg.CHOSEN_DEPTH):
     chosen_layer = end_points_itn[cfg.STYLE_LIST[i]]
     gram_features = gram_matrix(chosen_layer)
@@ -153,7 +150,7 @@ for i in range(cfg.CHOSEN_DEPTH):
     # Equal weighting on each loss, summing to 1
     layer_loss *= (1.0 / cfg.CHOSEN_DEPTH)
     layer_losses.append(layer_loss)
-style_loss = tf.add_n(layer_losses, name='sum_layer_losses')
+style_loss = cfg.STYLE_WEIGHT * tf.add_n(layer_losses, name='sum_layer_losses')
 
 
 ##############################
@@ -162,19 +159,14 @@ style_loss = tf.add_n(layer_losses, name='sum_layer_losses')
 
 content_rep_real = end_points_fixed[cfg.CONTENT_LAYER]
 content_rep_itn = end_points_itn[cfg.CONTENT_LAYER]
-
-content_loss = tf.losses.mean_squared_error(
-    labels=content_rep_real, predictions=content_rep_itn)
-
+content_loss = cfg.CONTENT_WEIGHT * content_rep_loss(content_rep_real, content_rep_itn)
 
 # Calculate total variation loss
-tv_loss = total_variation_loss(itn_outputs)
+tv_loss = cfg.TV_WEIGHT * total_variation_loss(itn_outputs)
 
 
 # Set up the final loss, optimizer, and summaries
-loss = (cfg.CONTENT_WEIGHT * content_loss) \
-    + (cfg.STYLE_WEIGHT * style_loss) \
-    + (cfg.TV_WEIGHT * tv_loss)
+loss = content_loss + style_loss + tv_loss
 optimizer = tf.train.AdamOptimizer(cfg.LEARNING_RATE)
 train_op = optimizer.minimize(
     loss,
@@ -210,7 +202,7 @@ with tf.Session() as sess:
     # Initialize all variables and then
     # restore weights for feature extractor
     sess.run(init_op)
-    vgg_16_saver.restore(sess, cfg.CHECKPOINT_PATH)
+    vgg_19_saver.restore(sess, cfg.CHECKPOINT_PATH)
 
     # Set up summary writer for tensorboard, saving graph as well
     train_writer = tf.summary.FileWriter(
@@ -228,7 +220,7 @@ with tf.Session() as sess:
             start_index = j * cfg.BATCH_SIZE
             content_image_batch = read_images.fetch_batch(
                 start_index, 'train')
-            summaries, _ =     sess.run(
+            summaries, _ = sess.run(
                 [train_merged_summaries, train_op],
                 feed_dict={image_inputs:content_image_batch})
 

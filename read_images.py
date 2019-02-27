@@ -22,6 +22,12 @@ NUM_VAL_IMAGES = len(VAL_IMAGE_FILENAMES)
 # throughout training
 CHOSEN_IDX = int(np.random.choice(NUM_VAL_IMAGES, 1, replace=False))
 
+if cfg.OVERFITTING_MODE:
+    VAL_IMAGE_FILENAMES = TRAIN_IMAGE_FILENAMES
+    NUM_TRAIN_IMAGES = 128
+    NUM_VAL_IMAGES = NUM_TRAIN_IMAGES
+    CHOSEN_IDX = 0
+
 
 def sample_batch():
     """

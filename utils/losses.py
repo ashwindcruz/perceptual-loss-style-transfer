@@ -28,30 +28,51 @@ def gram_matrix(feature_set):
 
     return gram_matrix
 
-def style_layer_loss(gram_matrix_desired, gram_matrix_predicted, filter_size):
+def style_layer_loss(
+    gram_matrix_desired, gram_matrix_predicted, filter_size):
     """
-    Compute the loss between the gram matrix of the styling image and the
-    gram matrix of the image undergoing optimization.
+    Compute the loss between the gram matrix of the styling image and 
+    the gram matrix of the image undergoing optimization.
 
     Args:
         gram_matrix_desired  : Gram matrix of the styling image
-        gram_matrix_predicted: Gram matrix of the image undergoing optimization.
+        gram_matrix_predicted: Gram matrix of the image undergoing 
+            optimization.
         filter_size          : The size of an individual filter map 
             (filter_height * filter_width)
     Returns:
         loss_contribution: The loss contribution from this layer
     """
+    # TODO: Should the batch size be taken into consideration? 
 
-    _, num_filters, _ = gram_matrix_desired.get_shape().as_list()
+    batch_size, num_filters, _ = gram_matrix_desired.get_shape().as_list()
     num_filters = float(num_filters)
     summed_squared_difference = tf.reduce_sum(
         tf.square(
             gram_matrix_predicted - gram_matrix_desired), 
         name='summed_squared_diff')
-    loss_contribution = (1 / (4 * np.power(num_filters, 2) 
-        * np.power(filter_size, 2))) \
-        * summed_squared_difference
+    scaling = np.power(num_filters, 2) * np.power(filter_size, 4) * batch_size
+    loss_contribution = (1 / scaling) * summed_squared_difference
 
+    return loss_contribution
+
+def content_rep_loss(content_rep_real, content_rep_itn):
+    """
+    Compute the feature reconstruction loss between feature 
+    representations from the original images and feature 
+    representations from the output of the image transform network.
+
+    Args:
+        content_rep_real  : Content representation of the real images.
+        content_rep_itn   : Content representation of the image
+            transform network output.
+    Returns:
+        loss_contribution: The loss contribution. 
+    """
+    
+    loss_contribution = tf.losses.mean_squared_error(
+        labels=content_rep_real, predictions=content_rep_itn)
+    
     return loss_contribution
 
 def total_variation_loss(images):

@@ -21,7 +21,7 @@ import vgg
 
 
 def conv_with_batch_norm(
-	inputs, filters, kernel_size, strides, is_training, name):
+	inputs, filters, kernel_size, strides, is_training, name, relu=True):
 	"""
 	Convolution followed by batch norm and ReLU activation. 
 
@@ -39,6 +39,7 @@ def conv_with_batch_norm(
 			patial dimensions. 
 		is_training: Whether or not the model is being trained.
 		name: A string, used for creating names for the operations used here.
+		relu: Whether to apply relu or not. 
 	Returns:
 		net: Tensor output. 
 	"""
@@ -48,7 +49,8 @@ def conv_with_batch_norm(
 			name='conv')
 		net = tf.layers.batch_normalization(
 			net, training=is_training, name='bn')
-		net = tf.nn.relu(net, name='relu')
+		if relu:
+			net = tf.nn.relu(net, name='relu')
 
 	return net
 
@@ -160,6 +162,13 @@ def image_transform_net(inputs, is_training):
 				
 		# Convolution
 		net = conv_with_batch_norm(
-			net, 3, 9, 1, is_training, '4')
+			net, 3, 9, 1, is_training, '4', relu=True)
+		net = tf.nn.tanh(net, name='tanh')
+
+		# Adjust output scale to be between 0 and 255
+		# Tanh is between -1 and 1
+		# +1 brings output to between 0 and 2
+		# *127.5 brings output to between 0 and 255
+		net = (net + 1) * (255/2)
 
 		return net
